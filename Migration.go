@@ -13,6 +13,7 @@ func (m Migration) String() string {
 	return string(m.SQL)
 }
 
+// MigrationInterface ...
 type MigrationInterface interface {
 	Up() Migration
 	Down() Migration
