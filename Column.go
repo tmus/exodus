@@ -26,7 +26,7 @@ func (c Column) toSQL() string {
 	// appended to the "core" column data - the name and type.
 	sql := fmt.Sprintf("%s %s", c.Name, c.Values)
 	// TODO: Tidy this up.
-	if c.Values == String && c.length != 0 {
+	if (c.Values == String || c.Values == Char) && c.length != 0 {
 		sql = sql + fmt.Sprintf("(%d)", c.length)
 	}
 	if c.nullable == false {
@@ -81,6 +81,14 @@ func StringColumn(name string, len int) Column {
 	return Column{
 		Name:   name,
 		Values: String,
+		length: len,
+	}
+}
+
+func CharColumn(name string, len int) Column {
+	return Column{
+		Name:   name,
+		Values: Char,
 		length: len,
 	}
 }
