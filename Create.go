@@ -18,7 +18,7 @@ func Create(table string, schema Schema) Migration {
 // returned.
 func loadColumnSQL(schema Schema) (commands []string) {
 	for _, col := range schema {
-		commands = append(commands, col.toSQL())
+		commands = append(commands, col.ToSQL())
 	}
 
 	return

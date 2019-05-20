@@ -1,4 +1,4 @@
-package exodus
+package column
 
 import "fmt"
 
@@ -7,26 +7,27 @@ import "fmt"
 // users to pass in their own implementations - an `IDColumn()`
 // method, for example.
 type Columnable interface {
-	toSQL() string
+	ToSQL() string
 }
 
 // Column defines a single column on a database table.
 type Column struct {
 	Name       string
-	Values     ColumnType
+	Values     string
 	increments bool
 	primaryKey bool
 	nullable   bool
 	length     int
 }
 
-func (c Column) toSQL() string {
+// ToSQL converts the column struct to an SQL command.
+func (c Column) ToSQL() string {
 	// TODO: Make this better. Really, all the "meta" info
 	// should be put into a slice and iterated through and
 	// appended to the "core" column data - the name and type.
 	sql := fmt.Sprintf("%s %s", c.Name, c.Values)
 	// TODO: Tidy this up.
-	if (c.Values == String || c.Values == Char) && c.length != 0 {
+	if (c.Values == "string" || c.Values == "char") && c.length != 0 {
 		sql = sql + fmt.Sprintf("(%d)", c.length)
 	}
 	if c.nullable == false {
@@ -42,12 +43,6 @@ func (c Column) toSQL() string {
 	}
 
 	return sql
-}
-
-// Is allows the user to define a column type in a fluent syntax.
-func (c Column) Is(t ColumnType) Column {
-	c.Values = t
-	return c
 }
 
 // Increments determines if the column auto-increments or not.
@@ -76,19 +71,10 @@ func (c Column) Nullable() Column {
 	return c
 }
 
-// StringColumn creates a column with a type of String.
-func StringColumn(name string, len int) Column {
-	return Column{
-		Name:   name,
-		Values: String,
-		length: len,
-	}
-}
-
-func CharColumn(name string, len int) Column {
-	return Column{
-		Name:   name,
-		Values: Char,
-		length: len,
-	}
+// Length adds a length constraint to applicable columns.
+// TODO: Should this throw an error on columns that can't
+// have a length modifier? Like TEXT?
+func (c Column) Length(len int) Column {
+	c.length = len
+	return c
 }

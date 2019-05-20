@@ -4,52 +4,8 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
-	"log"
 	"reflect"
 )
-
-// Run uses the passed migration to update the passed database.
-func Run(migration Migration, database *sql.DB) error {
-	if err := prepMigrations(database); err != nil {
-		log.Fatalln(err)
-	}
-
-	_, err := database.Exec(migration.String())
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// prepMigrations ensures that the migrations are ready to
-// be ran.
-func prepMigrations(database *sql.DB) error {
-	if !TableExists("migrations", database) {
-		if err := createMigrationsTable(database); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// createMigrationsTable runs SQL to create a table to hold
-// all of the migrations and the order that they were executed.
-func createMigrationsTable(database *sql.DB) error {
-	migrationSchema := fmt.Sprintf(
-		"CREATE TABLE migrations ( %s, %s, %s )",
-		"id integer not null primary key autoincrement",
-		"migration varchar not null",
-		"batch integer not null",
-	)
-
-	if _, err := database.Exec(migrationSchema); err != nil {
-		return fmt.Errorf("error creating migrations table: %s", err)
-	}
-
-	return nil
-}
 
 // TableExists determines if a table exists on the database.
 // TODO: Probably a better way of doing this.
@@ -82,3 +38,10 @@ func getDriverName(driver driver.Driver) string {
 
 	return ""
 }
+
+// Make Migrator struct with a pointer to a sql DB. This can then be used instead of passing the db in every time:
+
+// Migator.Run(migration)
+// Migrator.NextBatchNumber() //
+
+// Migration is a struct, should contain a sql.DB so we don't need to pass
