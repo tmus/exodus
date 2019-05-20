@@ -17,6 +17,7 @@ type Column struct {
 	increments   bool
 	primaryKey   bool
 	nullable     bool
+	unique       bool
 	length       int
 	defaultValue string
 }
@@ -35,6 +36,10 @@ func (c Column) ToSQL() string {
 		sql = sql + " not null"
 	}
 
+	if c.unique == true {
+		sql = sql + " unique"
+	}
+
 	if c.primaryKey == true {
 		sql = sql + " primary key"
 	}
@@ -48,6 +53,12 @@ func (c Column) ToSQL() string {
 	}
 
 	return sql
+}
+
+// Unique makes a columns value unique in the table.
+func (c Column) Unique() Column {
+	c.unique = true
+	return c
 }
 
 // Default sets the default value for a Column.
