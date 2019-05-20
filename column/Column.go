@@ -12,12 +12,13 @@ type Columnable interface {
 
 // Column defines a single column on a database table.
 type Column struct {
-	Name       string
-	Values     string
-	increments bool
-	primaryKey bool
-	nullable   bool
-	length     int
+	Name         string
+	Values       string
+	increments   bool
+	primaryKey   bool
+	nullable     bool
+	length       int
+	defaultValue string
 }
 
 // ToSQL converts the column struct to an SQL command.
@@ -42,7 +43,18 @@ func (c Column) ToSQL() string {
 		sql = sql + " autoincrement"
 	}
 
+	if c.defaultValue != "" {
+		sql = sql + " default " + c.defaultValue
+	}
+
 	return sql
+}
+
+// Default sets the default value for a Column.
+// TODO: value should be an interface to reflect.
+func (c Column) Default(value string) Column {
+	c.defaultValue = value
+	return c
 }
 
 // Increments determines if the column auto-increments or not.
