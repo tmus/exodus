@@ -13,7 +13,7 @@ type Columnable interface {
 // Column defines a single column on a database table.
 type Column struct {
 	Name         string
-	Values       string
+	datatype     string
 	increments   bool
 	primaryKey   bool
 	nullable     bool
@@ -27,9 +27,9 @@ func (c Column) ToSQL() string {
 	// TODO: Make this better. Really, all the "meta" info
 	// should be put into a slice and iterated through and
 	// appended to the "core" column data - the name and type.
-	sql := fmt.Sprintf("%s %s", c.Name, c.Values)
+	sql := fmt.Sprintf("%s %s", c.Name, c.datatype)
 	// TODO: Tidy this up.
-	if (c.Values == "string" || c.Values == "char") && c.length != 0 {
+	if (c.datatype == "string" || c.datatype == "char") && c.length != 0 {
 		sql = sql + fmt.Sprintf("(%d)", c.length)
 	}
 	if c.nullable == false {
@@ -97,7 +97,6 @@ func (c Column) Nullable() Column {
 // Length adds a length constraint to applicable columns.
 // TODO: Should this throw an error on columns that can't
 // have a length modifier? Like TEXT?
-func (c Column) Length(len int) Column {
+func (c *Column) Length(len int) {
 	c.length = len
-	return c
 }

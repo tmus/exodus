@@ -1,9 +1,12 @@
 package column
 
 // Char returns a char column.
-func Char(name string, len int) Column {
-	return Column{
-		Name:   name,
-		Values: "char",
-	}.Length(len)
+func Char(name string, len int) *Column {
+	col := &Column{
+		Name:     name,
+		datatype: "char",
+	}
+
+	col.Length(len)
+	return col
 }
