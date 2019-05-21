@@ -16,14 +16,21 @@ var supportedDrivers = []string{
 // Migrator is responsible for receiving the incoming migrations
 // and running their SQL.
 type Migrator struct {
-	DB *sql.DB
+	DB    *sql.DB
+	Batch int
 }
 
 // NewMigrator creates a new instance of a migrator.
-func NewMigrator(db *sql.DB) *Migrator {
-	return &Migrator{
+func NewMigrator(db *sql.DB) (*Migrator, error) {
+	m := Migrator{
 		DB: db,
 	}
+
+	if !m.driverIsSupported(m.getDriverName()) {
+		return nil, fmt.Errorf("the %s driver is currently unsupported", m.getDriverName())
+	}
+
+	return &m, nil
 }
 
 // TableExists determines if a table exists on the database.
@@ -121,27 +128,31 @@ func (m *Migrator) lastBatchNumber() int {
 	return num
 }
 
-// Run uses the passed migration to update the passed database.
-func (m *Migrator) Run(migration MigrationInterface) error {
+// TODO: Wrap this in a transaction and reverse it
+func (m *Migrator) Run(migrations ...MigrationInterface) error {
 	m.verifyMigrationsTable()
 
-	if _, err := m.DB.Exec(migration.Up().String()); err != nil {
-		return err
-	}
+	batch := m.nextBatchNumber()
 
-	m.addBatchToMigrationsTable(migration)
+	for _, migration := range migrations {
+		if _, err := m.DB.Exec(migration.Up().String()); err != nil {
+			return err
+		}
+
+		m.addBatchToMigrationsTable(migration, batch)
+	}
 
 	return nil
 }
 
-func (m *Migrator) addBatchToMigrationsTable(migration MigrationInterface) {
+func (m *Migrator) addBatchToMigrationsTable(migration MigrationInterface, batch int) {
 	stmt, err := m.DB.Prepare("INSERT INTO migrations (migration, batch) VALUES ( ?, ? )")
 	if err != nil {
 		log.Fatalln("Cannot create `migrations` batch statement. ")
 	}
 	defer stmt.Close()
 
-	if _, err = stmt.Exec(reflect.TypeOf(migration).String(), m.nextBatchNumber()); err != nil {
+	if _, err = stmt.Exec(reflect.TypeOf(migration).String(), batch); err != nil {
 		log.Fatalln(err)
 	}
 }
@@ -154,6 +165,16 @@ func (m *Migrator) verifyMigrationsTable() {
 			log.Fatalln("Could not create `migrations` table: ", err)
 		}
 	}
+}
+
+func (m *Migrator) driverIsSupported(driver string) bool {
+	for _, d := range supportedDrivers {
+		if d == driver {
+			return true
+		}
+	}
+
+	return false
 }
 
 // getDriverName returns the name of the SQL driver currently

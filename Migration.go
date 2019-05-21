@@ -5,8 +5,7 @@ import "fmt"
 // Migration is a complete, raw SQL command that can be ran
 // against a database.
 type Migration struct {
-	SQL   string
-	Batch int
+	SQL string
 }
 
 func (m Migration) String() string {
