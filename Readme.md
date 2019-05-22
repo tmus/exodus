@@ -13,7 +13,7 @@ Database Migrations in Go.
 
 Use Go Modules.
 
-`TODO: Add Installation instructions`
+Run `go get -u github.com/tmus/exodus`.
 
 ## Usage
 
