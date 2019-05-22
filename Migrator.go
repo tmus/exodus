@@ -135,7 +135,7 @@ func (m *Migrator) Run(migrations ...MigrationInterface) error {
 	batch := m.nextBatchNumber()
 
 	for _, migration := range migrations {
-		if _, err := m.DB.Exec(migration.Up().String()); err != nil {
+		if _, err := m.DB.Exec(string(migration.Up())); err != nil {
 			return err
 		}
 

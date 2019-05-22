@@ -2,15 +2,9 @@ package exodus
 
 import "fmt"
 
-// Migration is a complete, raw SQL command that can be ran
-// against a database.
-type Migration struct {
-	SQL string
-}
-
-func (m Migration) String() string {
-	return string(m.SQL)
-}
+// Migration is a fully-formed SQL command that can be ran against
+// a database connection.
+type Migration string
 
 // MigrationInterface ...
 type MigrationInterface interface {
@@ -18,21 +12,17 @@ type MigrationInterface interface {
 	Down() Migration
 }
 
-// Create generates a Migration that contains SQL to create
-// the schema against the table name provided.
+// Create generates an SQL command to create a table using the
+// schema provided.
 func Create(table string, schema Schema) Migration {
 	sql := parseColumns(loadColumnSQL(schema))
 
-	return Migration{
-		SQL: fmt.Sprintf("CREATE TABLE %s ( %s );", table, sql),
-	}
+	return Migration(fmt.Sprintf("CREATE TABLE %s ( %s );", table, sql))
 }
 
-// Drop generates an SQL command to drop a table.
+// Drop generates an SQL command to drop the given table.
 func Drop(table string) Migration {
-	return Migration{
-		SQL: fmt.Sprintf("DROP TABLE %s", table),
-	}
+	return Migration(fmt.Sprintf("DROP TABLE %s", table))
 }
 
 // loadColumnSQL iterates through the Columns defined in the
