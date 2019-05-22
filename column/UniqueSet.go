@@ -22,8 +22,6 @@ func (us *Constraint) ToSQL() string {
 		us.getSet(),
 	)
 
-	fmt.Println(sql)
-
 	return sql
 }
 
