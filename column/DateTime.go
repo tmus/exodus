@@ -5,5 +5,6 @@ func DateTime(name string) *Column {
 	return &Column{
 		Name:     name,
 		datatype: "datetime",
+		meta:     make(map[string]interface{}),
 	}
 }

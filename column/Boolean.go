@@ -5,5 +5,6 @@ func Boolean(name string) *Column {
 	return &Column{
 		Name:     name,
 		datatype: "boolean",
+		meta:     make(map[string]interface{}),
 	}
 }

@@ -5,5 +5,6 @@ func Timestamp(name string) *Column {
 	return &Column{
 		Name:     name,
 		datatype: "timestamp",
+		meta:     make(map[string]interface{}),
 	}
 }

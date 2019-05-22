@@ -5,5 +5,6 @@ func Date(name string) *Column {
 	return &Column{
 		Name:     name,
 		datatype: "date",
+		meta:     make(map[string]interface{}),
 	}
 }
