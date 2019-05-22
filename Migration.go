@@ -1,6 +1,9 @@
 package exodus
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Migration is a fully-formed SQL command that can be ran against
 // a database connection.
@@ -15,7 +18,7 @@ type MigrationInterface interface {
 // Create generates an SQL command to create a table using the
 // schema provided.
 func Create(table string, schema Schema) Migration {
-	sql := parseColumns(loadColumnSQL(schema))
+	sql := strings.Join(loadColumnSQL(schema), ", ")
 
 	return Migration(fmt.Sprintf("CREATE TABLE %s ( %s );", table, sql))
 }
@@ -32,21 +35,6 @@ func Drop(table string) Migration {
 func loadColumnSQL(schema Schema) (commands []string) {
 	for _, col := range schema {
 		commands = append(commands, col.ToSQL())
-	}
-
-	return
-}
-
-// parseColumns implodes the slice of SQL commands into a
-// single string containing all the column definitions.
-func parseColumns(sql []string) (formatted string) {
-	for i, command := range sql {
-		formatted = formatted + command
-		// If it is not the last column, add ", " after the
-		// formatted string.
-		if i != len(sql)-1 {
-			formatted = formatted + ", "
-		}
 	}
 
 	return
