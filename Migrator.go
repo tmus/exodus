@@ -136,7 +136,7 @@ func (m *Migrator) Run(migrations ...MigrationInterface) error {
 
 	for _, migration := range migrations {
 		if _, err := m.DB.Exec(string(migration.Up())); err != nil {
-			return err
+			return fmt.Errorf("unable to execute SQL `%s`: %w", string(migration.Up()), err)
 		}
 
 		m.addBatchToMigrationsTable(migration, batch)

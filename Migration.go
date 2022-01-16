@@ -9,6 +9,17 @@ import (
 // a database connection.
 type Migration string
 
+type BaseMigration struct{}
+
+func (BaseMigration) Up() Migration {
+	fmt.Println("WARNING: Migration empty")
+	return ""
+}
+
+func (BaseMigration) Down() Migration {
+	return ""
+}
+
 // MigrationInterface ...
 type MigrationInterface interface {
 	Up() Migration
