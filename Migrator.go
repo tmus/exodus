@@ -129,7 +129,7 @@ func (m *Migrator) lastBatchNumber() int {
 }
 
 // TODO: Wrap this in a transaction and reverse it
-func (m *Migrator) Run(migrations ...MigrationInterface) error {
+func (m *Migrator) Run(migrations ...Migration) error {
 	m.verifyMigrationsTable()
 
 	batch := m.nextBatchNumber()
@@ -147,7 +147,7 @@ func (m *Migrator) Run(migrations ...MigrationInterface) error {
 	return nil
 }
 
-func (m *Migrator) addBatchToMigrationsTable(migration MigrationInterface, batch int) {
+func (m *Migrator) addBatchToMigrationsTable(migration Migration, batch int) {
 	stmt, err := m.DB.Prepare("INSERT INTO migrations (migration, batch) VALUES ( ?, ? )")
 	if err != nil {
 		log.Fatalln("Cannot create `migrations` batch statement. ")

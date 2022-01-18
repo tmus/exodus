@@ -9,7 +9,7 @@ import (
 	"github.com/tmus/exodus"
 )
 
-var migrations []exodus.MigrationInterface = []exodus.MigrationInterface{
+var migrations []exodus.Migration = []exodus.Migration{
 	migration20220115115948create_users_table{},
 } // END OF MIGRATIONS
 

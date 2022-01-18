@@ -19,7 +19,7 @@ import (
 	"github.com/tmus/exodus"
 )
 
-var migrations []exodus.MigrationInterface = []exodus.MigrationInterface{} // END OF MIGRATIONS
+var migrations []exodus.Migration = []exodus.Migration{} // END OF MIGRATIONS
 
 func main() {
 	db, err := sql.Open("sqlite3", "./database.db")

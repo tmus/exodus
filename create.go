@@ -9,7 +9,7 @@ import (
 
 // Create generates an SQL command to create a table using the
 // schema provided.
-func Create(table string, columns []column.Definition) Migration {
+func Create(table string, columns []column.Definition) MigrationCommand {
 	var cols []string
 
 	for _, col := range columns {
@@ -18,5 +18,5 @@ func Create(table string, columns []column.Definition) Migration {
 
 	sql := strings.Join(cols, ",\n	")
 
-	return Migration(fmt.Sprintf("create table %s (\n	%s\n);", table, sql))
+	return MigrationCommand(fmt.Sprintf("create table %s (\n	%s\n);", table, sql))
 }

@@ -15,17 +15,15 @@ const migrationStub = `package main
 
 import "github.com/tmus/exodus"
 
-type REPLACE_ME struct {
-	exodus.BaseMigration
+type REPLACE_ME struct {}
+
+func (REPLACE_ME) Up() exodus.MigrationCommand {
+	return ""
 }
 
-// func (REPLACE_ME) Up() exodus.Migration {
-//	return ""
-// }
-
-// func (REPLACE_ME) Down() exodus.Migration {
-//	return ""
-// }`
+func (REPLACE_ME) Down() exodus.MigrationCommand {
+	return ""
+}`
 
 var createCmd = &cobra.Command{
 	Use:   "create",
