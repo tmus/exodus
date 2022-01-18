@@ -135,7 +135,9 @@ func (m *Migrator) Run(migrations ...MigrationInterface) error {
 	batch := m.nextBatchNumber()
 
 	for _, migration := range migrations {
-		if _, err := m.DB.Exec(string(migration.Up())); err != nil {
+		mig := string(migration.Up())
+		fmt.Println(mig)
+		if _, err := m.DB.Exec(mig); err != nil {
 			return fmt.Errorf("unable to execute SQL `%s`: %w", string(migration.Up()), err)
 		}
 
