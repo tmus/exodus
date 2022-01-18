@@ -14,7 +14,7 @@ var migrations []exodus.MigrationInterface = []exodus.MigrationInterface{
 } // END OF MIGRATIONS
 
 func main() {
-	db, err := sql.Open("sqlite3", "./database.db")
+	db, err := sql.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
 	if err != nil {
 		panic(err)
 	}
