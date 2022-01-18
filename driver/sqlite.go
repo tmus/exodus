@@ -2,11 +2,13 @@ package driver
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tmus/exodus"
+	"github.com/tmus/exodus/column"
 )
 
 const migrationSchema = `CREATE TABLE migrations (
@@ -15,7 +17,9 @@ const migrationSchema = `CREATE TABLE migrations (
 	batch integer not null
 );`
 
-const createTableSchema = `CREATE TABLE %s (id int);`
+const createTableSchema = `CREATE TABLE %s (%s);`
+
+const renameTableSchema = `ALTER TABLE %s RENAME TO %s;`
 
 type sqliteDriver struct {
 	db *sql.DB
@@ -36,12 +40,44 @@ func (d sqliteDriver) Close() error {
 	return d.db.Close()
 }
 
-func (sqliteDriver) Ref() string {
-	return "sqlite3"
+func (d sqliteDriver) Process(payload exodus.MigrationPayload) error {
+	switch payload.Operation {
+	case exodus.CREATE_TABLE:
+		return d.CreateTable(payload)
+	case exodus.RENAME_TABLE:
+		return d.RenameTable(payload)
+	default:
+		return errors.New("operation not supported")
+	}
+}
+
+func (d sqliteDriver) RenameTable(payload exodus.MigrationPayload) error {
+	from := payload.Table
+	to := payload.Payload.(string)
+	sql := fmt.Sprintf(renameTableSchema, from, to)
+
+	if _, err := d.db.Exec(sql); err != nil {
+		return fmt.Errorf("error renaming `%s` table to `%s`: %w", from, to, err)
+	}
+
+	return nil
 }
 
 func (d sqliteDriver) CreateTable(payload exodus.MigrationPayload) error {
-	sql := fmt.Sprintf(createTableSchema, payload.Table)
+	var cols []string
+
+	columns, ok := payload.Payload.([]column.Definition)
+	if !ok {
+		return errors.New("incorrect payload creating a table")
+	}
+
+	for _, col := range columns {
+		cols = append(cols, col.ToSQL())
+	}
+
+	colSql := strings.Join(cols, ",\n	")
+
+	sql := fmt.Sprintf(createTableSchema, payload.Table, colSql)
 
 	if _, err := d.db.Exec(sql); err != nil {
 		return fmt.Errorf("error creating `%s` table: %w", payload.Table, err)

@@ -4,8 +4,8 @@ type MigrationCommand string
 
 // Migration does x.
 type Migration interface {
-	Up() MigrationCommand
-	Down() MigrationCommand
+	Up() MigrationPayload
+	Down() MigrationPayload
 }
 
 type operation int

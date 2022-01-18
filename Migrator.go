@@ -47,10 +47,8 @@ func (m *Migrator) Run(migrations ...Migration) error {
 
 	batch := m.nextBatchNumber()
 	for _, migration := range migrations {
-		mig := string(migration.Up())
-		fmt.Println(mig)
-		if _, err := m.driver.GetDB().Exec(mig); err != nil {
-			return fmt.Errorf("unable to execute SQL `%s`: %w", string(migration.Up()), err)
+		if err := m.driver.Process(migration.Up()); err != nil {
+			return fmt.Errorf("unable to execute SQL: %w", err)
 		}
 
 		m.addBatchToMigrationsTable(migration, batch)

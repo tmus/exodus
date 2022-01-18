@@ -1,22 +1,15 @@
 package exodus
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/tmus/exodus/column"
 )
 
 // Create generates an SQL command to create a table using the
 // schema provided.
-func Create(table string, columns []column.Definition) MigrationCommand {
-	var cols []string
-
-	for _, col := range columns {
-		cols = append(cols, col.ToSQL())
+func Create(table string, columns []column.Definition) MigrationPayload {
+	return MigrationPayload{
+		Operation: CREATE_TABLE,
+		Payload:   columns,
+		Table:     table,
 	}
-
-	sql := strings.Join(cols, ",\n	")
-
-	return MigrationCommand(fmt.Sprintf("create table %s (\n	%s\n);", table, sql))
 }
