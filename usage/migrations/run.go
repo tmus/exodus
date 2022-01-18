@@ -3,10 +3,8 @@
 package main
 
 import (
-	"database/sql"
-
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/tmus/exodus"
+	"github.com/tmus/exodus/driver"
 )
 
 var migrations []exodus.Migration = []exodus.Migration{
@@ -14,13 +12,13 @@ var migrations []exodus.Migration = []exodus.Migration{
 } // END OF MIGRATIONS
 
 func main() {
-	db, err := sql.Open("sqlite3", "file:ent?mode=memory&cache=shared&_fk=1")
+	driver, err := driver.NewSqliteDriver("./database.db")
+	defer driver.Close()
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
 
-	migrator, err := exodus.NewMigrator(db)
+	migrator, err := exodus.NewMigrator(driver)
 	if err != nil {
 		panic(err)
 	}
