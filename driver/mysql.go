@@ -103,6 +103,8 @@ func (d mysqlDriver) makeColumn(c column.Definition) (string, error) {
 		return d.makeBooleanColumn(c)
 	case "date":
 		return d.makeDateColumn(c)
+	case "time":
+		return d.makeTimeColumn(c)
 	case "int":
 		return d.makeIntColumn(c)
 	default:
@@ -143,7 +145,20 @@ func (d mysqlDriver) makeIntColumn(c column.Definition) (string, error) {
 		return "", fmt.Errorf("cannot create column %s: nullable value is not bool", c.Name)
 	}
 
-	return fmt.Sprintf("%s INT%s%s%s", c.Name, d.autoincrementModifier(autoincrement), d.primaryKeyModifier(primaryKey), d.nullableModifier(nullable)), nil
+	defaultVal, ok := c.Metadata["default"].(string)
+	if !ok {
+		return "", fmt.Errorf("cannot create column %s: default value is not string", c.Name)
+	}
+
+	return fmt.Sprintf("%s INT%s%s%s%s", c.Name, d.autoincrementModifier(autoincrement), d.primaryKeyModifier(primaryKey), d.nullableModifier(nullable), d.defaultModifier(defaultVal)), nil
+}
+
+func (d mysqlDriver) defaultModifier(value string) string {
+	if value == "" {
+		return ""
+	}
+
+	return fmt.Sprintf(` DEFAULT "%s"`, value)
 }
 
 func (d mysqlDriver) autoincrementModifier(value bool) string {
@@ -173,7 +188,25 @@ func (d mysqlDriver) makeStringColumn(c column.Definition) (string, error) {
 		return "", fmt.Errorf("cannot add column `%s`: %w", c.Name, err)
 	}
 
-	return fmt.Sprintf("%s VARCHAR(%d)%s", c.Name, len, d.nullableModifier(nullable)), nil
+	defaultVal, ok := c.Metadata["default"].(string)
+	if !ok {
+		return "", fmt.Errorf("cannot create column %s: default value is not string", c.Name)
+	}
+
+	unique, ok := c.Metadata["unique"].(bool)
+	if !ok {
+		return "", fmt.Errorf("cannot create column %s: unique value is bool", c.Name)
+	}
+
+	return fmt.Sprintf("%s VARCHAR(%d)%s%s%s", c.Name, len, d.nullableModifier(nullable), d.defaultModifier(defaultVal), d.uniqueModifier(unique)), nil
+}
+
+func (d mysqlDriver) uniqueModifier(value bool) string {
+	if value {
+		return " UNIQUE"
+	}
+
+	return ""
 }
 
 func (d mysqlDriver) makeBooleanColumn(c column.Definition) (string, error) {
@@ -192,6 +225,15 @@ func (d mysqlDriver) makeDateColumn(c column.Definition) (string, error) {
 	}
 
 	return fmt.Sprintf("%s DATE%s", c.Name, d.nullableModifier(nullable)), nil
+}
+
+func (d mysqlDriver) makeTimeColumn(c column.Definition) (string, error) {
+	nullable, err := isNullable(c)
+	if err != nil {
+		return "", fmt.Errorf("cannot add column `%s`: %w", c.Name, err)
+	}
+
+	return fmt.Sprintf("%s TIME%s", c.Name, d.nullableModifier(nullable)), nil
 }
 
 func (d mysqlDriver) migrationSchema() string {

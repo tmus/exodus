@@ -17,12 +17,24 @@ func (d Definition) NotNullable() Definition {
 	return d
 }
 
+func (d Definition) Default(value string) Definition {
+	d.Metadata["default"] = value
+	return d
+}
+
+func (d Definition) Unique() Definition {
+	d.Metadata["unique"] = true
+	return d
+}
+
 func getBaseMeta() map[string]interface{} {
 	meta := make(map[string]interface{})
 	meta["nullable"] = false
 	meta["increments"] = false
 	meta["unsigned"] = false
 	meta["primary_key"] = false
+	meta["default"] = ""
+	meta["unique"] = false
 
 	return meta
 }
