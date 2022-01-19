@@ -1,24 +1,12 @@
 package column
 
-import "fmt"
-
 // String creates a column with a type of String.
-func String(name string, len int) *stringColumn {
-	base := &BaseColumn{
-		name: name,
+func String(name string, len int) Definition {
+	meta := make(map[string]interface{}, 1)
+	meta["length"] = len
+	return Definition{
+		Name:     name,
+		Kind:     "string",
+		Metadata: meta,
 	}
-
-	return &stringColumn{
-		length:     len,
-		BaseColumn: base,
-	}
-}
-
-type stringColumn struct {
-	*BaseColumn
-	length int
-}
-
-func (c stringColumn) ToSQL() string {
-	return fmt.Sprintf("%s VARCHAR(%d)", c.name, c.length)
 }

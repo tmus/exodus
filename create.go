@@ -6,10 +6,13 @@ import (
 
 // Create generates an SQL command to create a table using the
 // schema provided.
-func Create(table string, columns []column.Definition) MigrationPayload {
-	return MigrationPayload{
-		Operation: CREATE_TABLE,
-		Payload:   columns,
-		Table:     table,
+func (p *MigrationPayload) Create(table string, columns []column.Definition) *MigrationPayload {
+	op := &MigrationOperation{
+		operation: CREATE_TABLE,
+		payload:   columns,
+		table:     table,
 	}
+
+	p.ops = append(p.ops, op)
+	return p
 }

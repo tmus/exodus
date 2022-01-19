@@ -4,8 +4,8 @@ type MigrationCommand string
 
 // Migration does x.
 type Migration interface {
-	Up() MigrationPayload
-	Down() MigrationPayload
+	Up(migrate *MigrationPayload)
+	Down(migrate *MigrationPayload)
 }
 
 type operation int
@@ -17,10 +17,30 @@ const (
 	RENAME_TABLE
 )
 
+type MigrationOperation struct {
+	operation operation
+	payload   interface{}
+	table     string
+}
+
+func (o MigrationOperation) Operation() operation {
+	return o.operation
+}
+
+func (o MigrationOperation) Payload() interface{} {
+	return o.payload
+}
+
+func (o MigrationOperation) Table() string {
+	return o.table
+}
+
 type MigrationPayload struct {
-	Operation operation
-	Payload   interface{}
-	Table     string
+	ops []*MigrationOperation
+}
+
+func (p *MigrationPayload) Operations() []*MigrationOperation {
+	return p.ops
 }
 
 /*

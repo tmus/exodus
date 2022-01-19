@@ -3,6 +3,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/tmus/exodus"
 	"github.com/tmus/exodus/driver"
 )
@@ -13,17 +15,17 @@ var migrations []exodus.Migration = []exodus.Migration{
 
 func main() {
 	driver, err := driver.NewSqliteDriver("./database.db")
-	defer driver.Close()
 	if err != nil {
 		panic(err)
 	}
+	defer driver.Close()
 
 	migrator, err := exodus.NewMigrator(driver)
 	if err != nil {
 		panic(err)
 	}
 
-	if err := migrator.Run(migrations...); err != nil {
+	if err := migrator.Run(os.Args[1], migrations...); err != nil {
 		panic(err)
 	}
 }

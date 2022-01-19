@@ -17,13 +17,9 @@ import "github.com/tmus/exodus"
 
 type REPLACE_ME struct {}
 
-func (REPLACE_ME) Up() exodus.MigrationCommand {
-	return ""
-}
+func (REPLACE_ME) Up(schema *exodus.MigrationPayload) {}
 
-func (REPLACE_ME) Down() exodus.MigrationCommand {
-	return ""
-}`
+func (REPLACE_ME) Down(schema *exodus.MigrationPayload) {}`
 
 var createCmd = &cobra.Command{
 	Use:   "create",

@@ -33,7 +33,7 @@ func main() {
 		panic(err)
 	}
 
-	if err := migrator.Run(migrations...); err != nil {
+	if err := migrator.Run(os.Args[1], migrations...); err != nil {
 		panic(err)
 	}
 }

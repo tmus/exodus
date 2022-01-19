@@ -38,7 +38,7 @@ func (m *Migrator) lastBatchNumber() int {
 	return num
 }
 
-func (m *Migrator) Run(migrations ...Migration) error {
+func (m *Migrator) Run(dir string, migrations ...Migration) error {
 	m.Fresh() // temp
 
 	if err := m.verifyMigrationsTable(); err != nil {
@@ -47,7 +47,7 @@ func (m *Migrator) Run(migrations ...Migration) error {
 
 	batch := m.nextBatchNumber()
 	for _, migration := range migrations {
-		if err := m.driver.Process(migration.Up()); err != nil {
+		if err := m.driver.Process(migration); err != nil {
 			return fmt.Errorf("unable to execute SQL: %w", err)
 		}
 

@@ -1,9 +1,12 @@
 package exodus
 
-func Rename(from string, to string) MigrationPayload {
-	return MigrationPayload{
-		Operation: RENAME_TABLE,
-		Table:     from,
-		Payload:   to,
+func (p *MigrationPayload) Rename(from string, to string) *MigrationPayload {
+	op := &MigrationOperation{
+		operation: RENAME_TABLE,
+		table:     from,
+		payload:   to,
 	}
+
+	p.ops = append(p.ops, op)
+	return p
 }

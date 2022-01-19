@@ -17,7 +17,9 @@ const migrationSchema = `CREATE TABLE migrations (
 	batch integer not null
 );`
 
-const createTableSchema = `CREATE TABLE %s (%s);`
+const createTableSchema = `CREATE TABLE %s (
+	%s
+);`
 
 const renameTableSchema = `ALTER TABLE %s RENAME TO %s;`
 
@@ -40,21 +42,33 @@ func (d sqliteDriver) Close() error {
 	return d.db.Close()
 }
 
-func (d sqliteDriver) Process(payload exodus.MigrationPayload) error {
-	switch payload.Operation {
-	case exodus.CREATE_TABLE:
-		return d.CreateTable(payload)
-	case exodus.RENAME_TABLE:
-		return d.RenameTable(payload)
-	default:
-		return errors.New("operation not supported")
+func (d sqliteDriver) Process(migration exodus.Migration) error {
+	builder := &exodus.MigrationPayload{}
+	migration.Up(builder)
+
+	for _, p := range builder.Operations() {
+		switch p.Operation() {
+		case exodus.CREATE_TABLE:
+			if err := d.CreateTable(p); err != nil {
+				return err
+			}
+		case exodus.RENAME_TABLE:
+			if err := d.RenameTable(p); err != nil {
+				return err
+			}
+		default:
+			return errors.New("operation not supported")
+		}
 	}
+
+	return nil
 }
 
-func (d sqliteDriver) RenameTable(payload exodus.MigrationPayload) error {
-	from := payload.Table
-	to := payload.Payload.(string)
+func (d sqliteDriver) RenameTable(payload *exodus.MigrationOperation) error {
+	from := payload.Table()
+	to := payload.Payload().(string)
 	sql := fmt.Sprintf(renameTableSchema, from, to)
+	fmt.Println(sql)
 
 	if _, err := d.db.Exec(sql); err != nil {
 		return fmt.Errorf("error renaming `%s` table to `%s`: %w", from, to, err)
@@ -63,27 +77,58 @@ func (d sqliteDriver) RenameTable(payload exodus.MigrationPayload) error {
 	return nil
 }
 
-func (d sqliteDriver) CreateTable(payload exodus.MigrationPayload) error {
+func (d sqliteDriver) CreateTable(payload *exodus.MigrationOperation) error {
 	var cols []string
 
-	columns, ok := payload.Payload.([]column.Definition)
+	columns, ok := payload.Payload().([]column.Definition)
 	if !ok {
 		return errors.New("incorrect payload creating a table")
 	}
 
 	for _, col := range columns {
-		cols = append(cols, col.ToSQL())
+		def, err := d.makeColumn(col)
+		if err != nil {
+			return fmt.Errorf("unable to create table: %w", err)
+		}
+		cols = append(cols, def)
 	}
 
 	colSql := strings.Join(cols, ",\n	")
 
-	sql := fmt.Sprintf(createTableSchema, payload.Table, colSql)
+	sql := fmt.Sprintf(createTableSchema, payload.Table(), colSql)
+	fmt.Println(sql)
 
 	if _, err := d.db.Exec(sql); err != nil {
-		return fmt.Errorf("error creating `%s` table: %w", payload.Table, err)
+		return fmt.Errorf("error creating `%s` table: %w", payload.Table(), err)
 	}
 
 	return nil
+}
+
+// makeColumn takes a column.Definition and turns it into a string representation
+// of that column, in a format that is understood by the driver.
+func (d sqliteDriver) makeColumn(c column.Definition) (string, error) {
+	switch c.Kind {
+	case "string":
+		return d.makeStringColumn(c)
+	case "boolean":
+		return d.makeBooleanColumn(c)
+	default:
+		return "", fmt.Errorf("unable to make column `%s`. unknown kind `%s`", c.Name, c.Kind)
+	}
+}
+
+func (d sqliteDriver) makeStringColumn(c column.Definition) (string, error) {
+	len, ok := c.Metadata["length"].(int)
+	if !ok {
+		return "", fmt.Errorf("invalid length (%v) for column %s", c.Metadata["length"], c.Name)
+	}
+
+	return fmt.Sprintf("%s VARCHAR(%d)", c.Name, len), nil
+}
+
+func (d sqliteDriver) makeBooleanColumn(c column.Definition) (string, error) {
+	return fmt.Sprintf("%s BOOLEAN", c.Name), nil
 }
 
 func (d sqliteDriver) CreateMigrationsTable() error {
