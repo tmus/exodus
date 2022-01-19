@@ -20,6 +20,9 @@ func (d Definition) NotNullable() Definition {
 func getBaseMeta() map[string]interface{} {
 	meta := make(map[string]interface{})
 	meta["nullable"] = false
+	meta["increments"] = false
+	meta["unsigned"] = false
+	meta["primary_key"] = false
 
 	return meta
 }
