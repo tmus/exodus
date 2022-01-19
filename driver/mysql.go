@@ -138,7 +138,12 @@ func (d mysqlDriver) makeIntColumn(c column.Definition) (string, error) {
 		return "", fmt.Errorf("cannot create column %s: primary_key value is not bool", c.Name)
 	}
 
-	return fmt.Sprintf("%s INT%s%s", c.Name, d.autoincrementModifier(autoincrement), d.primaryKeyModifier(primaryKey)), nil
+	nullable, ok := c.Metadata["nullable"].(bool)
+	if !ok {
+		return "", fmt.Errorf("cannot create column %s: nullable value is not bool", c.Name)
+	}
+
+	return fmt.Sprintf("%s INT%s%s%s", c.Name, d.autoincrementModifier(autoincrement), d.primaryKeyModifier(primaryKey), d.nullableModifier(nullable)), nil
 }
 
 func (d mysqlDriver) autoincrementModifier(value bool) string {
