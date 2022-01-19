@@ -39,7 +39,9 @@ func (m *Migrator) lastBatchNumber() int {
 }
 
 func (m *Migrator) Run(dir string, migrations ...Migration) error {
-	m.Fresh() // temp
+	if err := m.Fresh(); err != nil {
+		return err
+	} // temp
 
 	if err := m.verifyMigrationsTable(); err != nil {
 		return fmt.Errorf("cannot verify state of `migrations` table: %w", err)

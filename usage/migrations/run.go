@@ -14,7 +14,7 @@ var migrations []exodus.Migration = []exodus.Migration{
 } // END OF MIGRATIONS
 
 func main() {
-	driver, err := driver.NewSqliteDriver("./database.db")
+	driver, err := driver.NewMysqlDriver("root:root@/db")
 	if err != nil {
 		panic(err)
 	}
