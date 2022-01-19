@@ -13,6 +13,7 @@ func (migration20220115115948create_users_table) Up(schema *exodus.MigrationPayl
 		column.String("username", 255).Nullable(),
 		column.Boolean("is_verified"),
 		column.Date("created_at"),
+		column.Int("visits"),
 	})
 }
 
