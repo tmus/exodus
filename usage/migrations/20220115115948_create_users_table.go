@@ -20,5 +20,5 @@ func (migration20220115115948create_users_table) Up(schema *exodus.MigrationPayl
 }
 
 func (migration20220115115948create_users_table) Down(schema *exodus.MigrationPayload) {
-
+	schema.Drop("example")
 }

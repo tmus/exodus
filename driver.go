@@ -5,7 +5,7 @@ type Driver interface {
 	Init() error
 	// Run takes a slice of exodus.Migration and runs it against the
 	// underlying data store defined in the driver.
-	Run(payload []Migration) error
+	Run(options Options, payload []Migration) error
 	// Close closes the underlying database instance.
 	Close() error
 }

@@ -35,7 +35,6 @@ func NewDriver(datasource string) (*mysqlDriver, error) {
 }
 
 func (d mysqlDriver) Init() error {
-	d.fresh()
 	// Before running migrations, make sure that the migrations table exists on
 	// the underlying database. This table is used to track which migrations
 	// have already been ran. If it doesn't exist, then create it.
@@ -52,7 +51,18 @@ func (d mysqlDriver) Close() error {
 	return d.db.Close()
 }
 
-func (d mysqlDriver) Run(migrations []exodus.Migration) error {
+func (d mysqlDriver) Run(opts exodus.Options, migrations []exodus.Migration) error {
+	switch opts.Direction() {
+	case exodus.Up:
+		return d.runUp(opts, migrations)
+	case exodus.Down:
+		return d.runDown(opts, migrations)
+	default:
+		return errors.New("not running migrations, direction not specified")
+	}
+}
+
+func (d mysqlDriver) runUp(opts exodus.Options, migrations []exodus.Migration) error {
 	// First, retrieve the list of migrations that have previously been ran. These
 	// migrations are then used to determine which of the incoming migrations
 	// should be ran against the database.
@@ -78,8 +88,52 @@ func (d mysqlDriver) Run(migrations []exodus.Migration) error {
 	return nil
 }
 
+func (d mysqlDriver) runDown(opts exodus.Options, migrations []exodus.Migration) error {
+	// First, retrieve the list of migrations that have previously been ran. These
+	// will be used to retrieve the Down method of each migration to run.
+	previous, err := d.getLastBatchRan()
+	if err != nil {
+		return fmt.Errorf("unable to process migrations: %w", err)
+	}
+	migrations = filterRanMigrations(migrations, previous)
+
+	if len(migrations) == 0 {
+		d.log.Info().Msg("Nothing to rollback.")
+		return nil
+	}
+
+	for _, migration := range migrations {
+		if err := d.processDown(migration); err != nil {
+			return fmt.Errorf("unable to execute SQL: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func (d mysqlDriver) getRan() ([]string, error) {
 	rows, err := d.db.Query("SELECT migration FROM migrations")
+	if err != nil {
+		return []string{}, fmt.Errorf("unable to get previous migrations from database: %w", err)
+	}
+
+	var ran []string
+	for rows.Next() {
+		var migration string
+		if err := rows.Scan(&migration); err != nil {
+			return []string{}, fmt.Errorf("unable to get previous migrations from database: %w", err)
+		}
+		ran = append(ran, migration)
+	}
+	if err := rows.Err(); err != nil {
+		return []string{}, fmt.Errorf("unable to get previous migrations from database: %w", err)
+	}
+
+	return ran, nil
+}
+
+func (d mysqlDriver) getLastBatchRan() ([]string, error) {
+	rows, err := d.db.Query("SELECT migration FROM migrations WHERE batch = (SELECT MAX(batch) FROM migrations)")
 	if err != nil {
 		return []string{}, fmt.Errorf("unable to get previous migrations from database: %w", err)
 	}
@@ -125,6 +179,36 @@ func (d mysqlDriver) process(migration exodus.Migration, batch int) error {
 	return nil
 }
 
+func (d mysqlDriver) processDown(migration exodus.Migration) error {
+	builder := &exodus.MigrationPayload{}
+	migration.Down(builder)
+	start := time.Now()
+	d.log.Info().Msgf("Rolling back: %s", reflect.TypeOf(migration).String())
+	for _, p := range builder.Operations() {
+		switch p.Operation() {
+		case exodus.CREATE_TABLE:
+			if err := d.createTable(p); err != nil {
+				return err
+			}
+		case exodus.RENAME_TABLE:
+			if err := d.renameTable(p); err != nil {
+				return err
+			}
+		case exodus.DROP_TABLE:
+			if err := d.dropTable(p); err != nil {
+				return err
+			}
+		default:
+			return errors.New("operation not supported")
+		}
+	}
+
+	d.removeMigrationLog(migration)
+
+	d.log.Info().Msgf("Rolled back: %s in %v", reflect.TypeOf(migration).String(), time.Since(start))
+	return nil
+}
+
 func (d mysqlDriver) logMigration(migration exodus.Migration, batch int) error {
 	stmt, err := d.db.Prepare("INSERT INTO migrations (migration, batch) VALUES ( ?, ? )")
 	if err != nil {
@@ -133,6 +217,20 @@ func (d mysqlDriver) logMigration(migration exodus.Migration, batch int) error {
 	defer stmt.Close()
 
 	if _, err = stmt.Exec(reflect.TypeOf(migration).String(), batch); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d mysqlDriver) removeMigrationLog(migration exodus.Migration) error {
+	stmt, err := d.db.Prepare("DELETE FROM migrations WHERE migration = ?")
+	if err != nil {
+		log.Fatalln("Cannot create `migrations` remove statement. ")
+	}
+	defer stmt.Close()
+
+	if _, err = stmt.Exec(reflect.TypeOf(migration).String()); err != nil {
 		return err
 	}
 
@@ -152,6 +250,17 @@ func (d mysqlDriver) lastBatchNumber() int {
 	var num int
 	r.Scan(&num)
 	return num
+}
+
+func (d mysqlDriver) dropTable(payload *exodus.MigrationOperation) error {
+	table := payload.Table()
+	sql := fmt.Sprintf(dropTableSchema, table)
+
+	if _, err := d.db.Exec(sql); err != nil {
+		return fmt.Errorf("unable to drop table `%s`: %w", table, err)
+	}
+
+	return nil
 }
 
 func (d mysqlDriver) renameTable(payload *exodus.MigrationOperation) error {
@@ -247,6 +356,18 @@ func filterPendingMigrations(migrations []exodus.Migration, existing []string) [
 
 	for _, migration := range migrations {
 		if !exists(migration, existing) {
+			response = append(response, migration)
+		}
+	}
+
+	return response
+}
+
+func filterRanMigrations(migrations []exodus.Migration, existing []string) []exodus.Migration {
+	var response []exodus.Migration
+
+	for _, migration := range migrations {
+		if exists(migration, existing) {
 			response = append(response, migration)
 		}
 	}

@@ -14,4 +14,6 @@ func (migration20220120041331create_posts_table) Up(schema *exodus.MigrationPayl
 	})
 }
 
-func (migration20220120041331create_posts_table) Down(schema *exodus.MigrationPayload) {}
+func (migration20220120041331create_posts_table) Down(schema *exodus.MigrationPayload) {
+	schema.Drop("posts")
+}

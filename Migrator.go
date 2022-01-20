@@ -16,15 +16,27 @@ func NewMigrator(driver Driver) (*Migrator, error) {
 	return m, nil
 }
 
-// TODO replace dir with opts, which includes direction and fresh commands, maybe more.
-func (m *Migrator) Run(dir string, migrations ...Migration) error {
+func (m *Migrator) Run(args []string, migrations ...Migration) error {
+	opts := gatherOptions(args)
+
 	if err := m.driver.Init(); err != nil {
 		return fmt.Errorf("cannot initialise migration driver: %w", err)
 	}
 
-	if err := m.driver.Run(migrations); err != nil {
+	if err := m.driver.Run(opts, migrations); err != nil {
 		return fmt.Errorf("unable to run migrations: %w", err)
 	}
 
 	return nil
+}
+
+func gatherOptions(args []string) Options {
+	dir := Unknown
+	if len(args) > 0 {
+		dir = directionFromString(args[1])
+	}
+
+	return Options{
+		direction: dir,
+	}
 }

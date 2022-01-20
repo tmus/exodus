@@ -1,6 +1,7 @@
 package mysql
 
 const (
+	dropTableSchema   = `DROP TABLE %s;`
 	renameTableSchema = `ALTER TABLE %s RENAME TO %s;`
 	createTableSchema = `CREATE TABLE %s (
 	%s
