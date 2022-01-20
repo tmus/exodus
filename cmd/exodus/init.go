@@ -13,10 +13,10 @@ const migrator = `DO_NOT_EDIT_WARNING
 package main
 
 import (
-	"database/sql"
+	"os"
 
-	"github.com/tmus/exodus/driver/mysql"
 	"github.com/tmus/exodus"
+	"github.com/tmus/exodus/driver/mysql"
 )
 
 var migrations []exodus.Migration = []exodus.Migration{} // END OF MIGRATIONS

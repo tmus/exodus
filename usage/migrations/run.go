@@ -9,10 +9,7 @@ import (
 	"github.com/tmus/exodus/driver/mysql"
 )
 
-var migrations []exodus.Migration = []exodus.Migration{
-	migration20220115115948create_users_table{},
-	migration20220120041331create_posts_table{},
-} // END OF MIGRATIONS
+var migrations []exodus.Migration = []exodus.Migration{} // END OF MIGRATIONS
 
 func main() {
 	var  driver exodus.Driver
