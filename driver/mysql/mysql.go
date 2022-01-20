@@ -5,16 +5,21 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
 	"reflect"
 	"strings"
+	"time"
 
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/tmus/exodus"
 	"github.com/tmus/exodus/column"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/rs/zerolog"
 )
 
 type mysqlDriver struct {
-	db *sql.DB
+	db  *sql.DB
+	log zerolog.Logger
 }
 
 func NewDriver(datasource string) (*mysqlDriver, error) {
@@ -24,15 +29,16 @@ func NewDriver(datasource string) (*mysqlDriver, error) {
 	}
 
 	return &mysqlDriver{
-		db: db,
+		db:  db,
+		log: zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.Kitchen}).With().Timestamp().Logger(),
 	}, nil
 }
 
 func (d mysqlDriver) Init() error {
-	// if err := d.fresh(); err != nil {
-	// 	return err
-	// }
-
+	d.fresh()
+	// Before running migrations, make sure that the migrations table exists on
+	// the underlying database. This table is used to track which migrations
+	// have already been ran. If it doesn't exist, then create it.
 	if ok, _ := d.tableExists("migrations"); !ok {
 		if err := d.createMigrationsTable(); err != nil {
 			return err
@@ -46,7 +52,10 @@ func (d mysqlDriver) Close() error {
 	return d.db.Close()
 }
 
-func (d mysqlDriver) ProcessBatch(migrations []exodus.Migration) error {
+func (d mysqlDriver) Run(migrations []exodus.Migration) error {
+	// First, retrieve the list of migrations that have previously been ran. These
+	// migrations are then used to determine which of the incoming migrations
+	// should be ran against the database.
 	previous, err := d.getRan()
 	if err != nil {
 		return fmt.Errorf("unable to process migrations: %w", err)
@@ -54,18 +63,17 @@ func (d mysqlDriver) ProcessBatch(migrations []exodus.Migration) error {
 	migrations = filterPendingMigrations(migrations, previous)
 
 	if len(migrations) == 0 {
-		// TODO: Add logger to the driver
-		fmt.Println("Nothing to migrate.")
+		d.log.Info().Msg("Nothing to migrate.")
 		return nil
 	}
 
+	batch := d.nextBatchNumber()
+
 	for _, migration := range migrations {
-		if err := d.process(migration); err != nil {
+		if err := d.process(migration, batch); err != nil {
 			return fmt.Errorf("unable to execute SQL: %w", err)
 		}
 	}
-
-	d.addBatchToMigrationsTable(migrations, d.nextBatchNumber())
 
 	return nil
 }
@@ -91,10 +99,11 @@ func (d mysqlDriver) getRan() ([]string, error) {
 	return ran, nil
 }
 
-func (d mysqlDriver) process(migration exodus.Migration) error {
+func (d mysqlDriver) process(migration exodus.Migration, batch int) error {
 	builder := &exodus.MigrationPayload{}
 	migration.Up(builder)
-
+	start := time.Now()
+	d.log.Info().Msgf("Migrating: %s", reflect.TypeOf(migration).String())
 	for _, p := range builder.Operations() {
 		switch p.Operation() {
 		case exodus.CREATE_TABLE:
@@ -110,20 +119,21 @@ func (d mysqlDriver) process(migration exodus.Migration) error {
 		}
 	}
 
+	d.logMigration(migration, batch)
+
+	d.log.Info().Msgf("Migrated: %s in %v", reflect.TypeOf(migration).String(), time.Since(start))
 	return nil
 }
 
-func (d mysqlDriver) addBatchToMigrationsTable(migrations []exodus.Migration, batch int) error {
+func (d mysqlDriver) logMigration(migration exodus.Migration, batch int) error {
 	stmt, err := d.db.Prepare("INSERT INTO migrations (migration, batch) VALUES ( ?, ? )")
 	if err != nil {
 		log.Fatalln("Cannot create `migrations` batch statement. ")
 	}
 	defer stmt.Close()
 
-	for _, migration := range migrations {
-		if _, err = stmt.Exec(reflect.TypeOf(migration).String(), batch); err != nil {
-			return err
-		}
+	if _, err = stmt.Exec(reflect.TypeOf(migration).String(), batch); err != nil {
+		return err
 	}
 
 	return nil
@@ -148,7 +158,6 @@ func (d mysqlDriver) renameTable(payload *exodus.MigrationOperation) error {
 	from := payload.Table()
 	to := payload.Payload().(string)
 	sql := fmt.Sprintf(renameTableSchema, from, to)
-	fmt.Println(sql)
 
 	if _, err := d.db.Exec(sql); err != nil {
 		return fmt.Errorf("error renaming `%s` table to `%s`: %w", from, to, err)
@@ -176,7 +185,6 @@ func (d mysqlDriver) createTable(payload *exodus.MigrationOperation) error {
 	colSql := strings.Join(cols, ",\n	")
 
 	sql := fmt.Sprintf(createTableSchema, payload.Table(), colSql)
-	fmt.Println(sql)
 
 	if _, err := d.db.Exec(sql); err != nil {
 		return fmt.Errorf("error creating `%s` table: %w", payload.Table(), err)

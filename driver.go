@@ -3,9 +3,9 @@ package exodus
 type Driver interface {
 	// Init allows the migration driver to do any one time set up when ran.
 	Init() error
-	// ProcessBatch takes a slice of exodus.Migration and runs it against the
+	// Run takes a slice of exodus.Migration and runs it against the
 	// underlying data store defined in the driver.
-	ProcessBatch(payload []Migration) error
+	Run(payload []Migration) error
 	// Close closes the underlying database instance.
 	Close() error
 }

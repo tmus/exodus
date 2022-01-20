@@ -22,7 +22,7 @@ func (m *Migrator) Run(dir string, migrations ...Migration) error {
 		return fmt.Errorf("cannot initialise migration driver: %w", err)
 	}
 
-	if err := m.driver.ProcessBatch(migrations); err != nil {
+	if err := m.driver.Run(migrations); err != nil {
 		return fmt.Errorf("unable to run migrations: %w", err)
 	}
 
