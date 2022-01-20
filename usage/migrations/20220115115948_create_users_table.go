@@ -12,7 +12,7 @@ func (migration20220115115948create_users_table) Up(schema *exodus.MigrationPayl
 		column.Increments("id"),
 		column.String("display_name", 255).Nullable().Default("greenhorn"),
 		column.String("email", 100).Unique(),
-		column.Boolean("is_verified"),
+		column.Boolean("suspended").Nullable(),
 		column.Date("created_at"),
 		column.Time("eats_breakfast_at"),
 		column.Int("visits").Default("5"),
