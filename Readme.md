@@ -10,8 +10,16 @@ underlying database.
 ## Installation
 
 Exodus comes in two parts. Firstly, it is a binary file that can be installed
-with `go install github.com/tmus/exodus`. This binary file allows you to
-initialise, create and run migrations.
+with `go install github.com/tmus/exodus/cmd/exodus@master`. This binary file
+allows you to initialise, create and run migrations.
+
+You should also run `go get github.com/tmus/exodus@master` to add the library to
+your module's dependencies.
+
+### CLI
+
+Once installed, you can run `exodus help` to get more information on how to use
+the CLI.
 
 Use Go Modules.
 

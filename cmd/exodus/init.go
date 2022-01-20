@@ -15,25 +15,26 @@ package main
 import (
 	"database/sql"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/tmus/exodus/driver/mysql"
 	"github.com/tmus/exodus"
 )
 
 var migrations []exodus.Migration = []exodus.Migration{} // END OF MIGRATIONS
 
 func main() {
-	db, err := sql.Open("sqlite3", "./database.db")
+	var  driver exodus.Driver
+	driver, err := mysql.NewDriver("root:root@/db")
 	if err != nil {
 		panic(err)
 	}
-	defer db.Close()
+	defer driver.Close()
 
-	migrator, err := exodus.NewMigrator(db)
+	migrator, err := exodus.NewMigrator(driver)
 	if err != nil {
 		panic(err)
 	}
 
-	if err := migrator.Run(os.Args[1], migrations...); err != nil {
+	if err := migrator.Run(os.Args, migrations...); err != nil {
 		panic(err)
 	}
 }
