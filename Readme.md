@@ -9,113 +9,115 @@ underlying database.
 
 ## Installation
 
-Exodus comes in two parts. Firstly, it is a binary file that can be installed
-with `go install github.com/tmus/exodus/cmd/exodus@master`. This binary file
-allows you to initialise, create and run migrations.
+Exodus comes in two parts:
 
-You should also run `go get github.com/tmus/exodus@master` to add the library to
-your module's dependencies.
+1. It is a library that enables you to write platform agnostic database
+   migrations.
+2. It is a command line program that enables you to run and manage these
+   migrations.
+
+Firstly, you should install the library in your project with
+`go get github.com/tmus/exodus@latest`.
+
+Then, install the command line program with
+`go install github.com/tmus/exodus/cmd/exodus@latest`.
+
+## Usage
 
 ### CLI
 
 Once installed, you can run `exodus help` to get more information on how to use
 the CLI.
 
-Use Go Modules.
+#### `init`
 
-Run `go get -u github.com/tmus/exodus`.
+The `init` command bootstraps a `migrations/` directory in the current working
+directory. This will contain a `run.go` file and is where created migrations
+will live.
 
-## Usage
+> The `run.go` file is generated and should not be edited manually. However,
+> given the fact that this library is a work–in–progress, there may be times
+> that you do need to manually make changes, for example to populate the
+> database credentials and datasource.
 
-There's not exactly a Laravel / Rails / Zend / <Framework> way of running the
-migrations, yet, in that there is no command line utility to run or generate the
-migrations. Much of this will be streamlined in future releases.
+#### `create`
 
-1. Create a new struct type. The type should be the name of the migration:
+The `create` command will add a new migration file to the directory created by
+`init`. You must pass in a single argument, which will be the name of the
+migration. The datetime is prepended to this name so that migrations are stored
+in order and are guaranteed to be unique.
+
+For example `exodus create create_users_table` would yield a new file called
+`20220120211339_create_users_table.go`.
+
+Once the file is created, you may write migration scripts inside it.
+
+#### `run`
+
+The `run` command runs the migrations against the database. Any previously ran
+migrations are not ran again.
+
+There are two directions that the migrations can run: `up` and `down`, which can
+be specified as part of the command. If a direction is not provided, `up` is
+assumed.
+
+`up` will run all migrations that have not yet been ran against the database, by
+running the `Up` function inside the migration file.
+
+`down` will revert the last "batch" of migrations that have been ran, by running
+the `Down` function inside the migration file.
+
+### Library
+
+To create a new migration, run `exodus create <migration_name>`. This will
+create a corresponding migration inside the migrations directory.
+
+Two functions will exist against this migration: `Up` and `Down`, which both
+take a single argument of `*exodus.MigrationPayload`. You can use this payload
+to register commands to run against the database.
+
+Let's make a `users` table, by calling the `schema.Create` function with a table
+name and a slice of `column.Definition`:
 
 ```go
-type CreateUsersTable struct{}
+func (migration20220121120254create_users_table) Up(schema *exodus.MigrationPayload) {
+	schema.Create("users", []column.Definition{})
+}
 ```
 
-2. Define two methods on the created struct: `Up()` and `Down()`. These should
-   both return an `exodus.Migration`. This satisfies the
-   `exodus.MigrationInterface`.
-
-The `Up()` function should run the _creative_ side of the migration, e.g.,
-creating a new table. The `Down()` function should run the _destructive_ side of
-the migration, e.g., dropping the table.
+This would create an empty table. Let's add some columns. For a `users` table,
+let's add an incrementing integer for the primary key, as well as an email (that
+needs to be unique!) and password.
 
 ```go
-func (m CreateUsersTable) Up() exodus.Migration {
-	return exodus.Create("users", exodus.Schema{
-		column.Int("id").Increments().PrimaryKey(),
-		column.String("email", 100).NotNullable().Unique(),
-		column.String("name", 60).NotNullable(),
-		column.Timestamp("activated_at"),
-		column.Date("birthday"),
-
-		column.UniqueSet("unique_name_birthday", "name", "birthday"),
+func (migration20220121120254create_users_table) Up(schema *exodus.MigrationPayload) {
+	schema.Create("users", []column.Definition{
+		column.Increments("id"),
+		column.String("email", 100).Unique(),
+		column.String("password", 255),
 	})
 }
+```
 
-// Down reverts the changes on the database.
-func (m CreateUsersTable) Down() exodus.Migration {
-	return exodus.Drop("users")
+Notice the `Increments` convenience function and the chained `Unique` call.
+That'll do for now, but you can check the documentation for a full list of
+supported column types and modifiers.
+
+We should write an equivalent `Down` call for this operation. If the `Up` call
+creates the table, the `Down` call should drop it:
+
+```go
+func (migration20220121120254create_users_table) Down(schema *exodus.MigrationPayload) {
+	schema.Drop("users")
 }
 ```
 
-3. As you can see above, there exists a Create method and a Drop method. More
-   methods (change, add, remove column) will be added at some point.
+We're in a good position to run our migrations. `cd` into the `migrations`
+directory and run `exodus run up`. You'll get visible feedback that the
+migrations have ran, or notices of any errors and the reason for failure.
 
-The `exodus.Create` method accepts a table name as a string, and an
-`exodus.Schema`, which is a slice of items that implement the
-[`exodus.Columnable`](column/Column.go) interface. It's easy to add columns to
-this schema, as you can see in the above `Up()` migration.
+If all went well, you should be able to check your database and see that the
+table exists, as well as a record of the migration in the `migrations` table.
 
-The supported column types are:
-
-- `column.Binary`: creates a `binary` column.
-- `column.Boolean`: creates a `boolean` column.
-- `column.Char`: creates a `char` column. Must be passed a length as the second
-  parameter.
-- `column.Date`: creates a `date` column.
-- `column.DateTime`: creates a `datetime` column.
-- `column.Int`: creates an `int` column. Currently only `int` is supported.
-- `column.String`: creates a `varchar` column. Must be passed a length as the
-  second parameter.
-- `column.Text`: creates a `text` column.
-- `column.Timestamp`: creates a `timestamp` column.
-
-These columns can have modifiers chained to them, as you can see in the `Up()`
-migration above. Their effects should be obvious:
-
-- `Unique()`
-- `Default(value string)`
-- `Increments()`
-- `PrimaryKey()`
-- `NotNullable()`
-- `Nullable()`
-- `Length()`
-
-4. When your migrations have been created, create an `exodus.Migrator`, and pass
-   it an `*sql.DB`. The function will return an error if the DB driver passed in
-   is not supported.
-
-```go
-db, _ := sql.Open("sqlite3", "./database.db")
-defer db.Close()
-
-migrator, err := exodus.NewMigrator(db)
-if err != nil {
-    log.Fatalln(err)
-}
-```
-
-5. Finally, use the migrator to run the Migrations. You can pass as many
-   migrations as you like into the Run function:
-
-```go
-migrator.Run(migrations ...MigrationInterface)
-```
-
-The tables should now exist in your database.
+To revert this migration, simply run `exodus run down`, which will revert the
+last "batch" of migrations.
