@@ -35,6 +35,7 @@ func NewDriver(datasource string) (*mysqlDriver, error) {
 }
 
 func (d mysqlDriver) Init() error {
+	d.fresh()
 	// Before running migrations, make sure that the migrations table exists on
 	// the underlying database. This table is used to track which migrations
 	// have already been ran. If it doesn't exist, then create it.
@@ -164,8 +165,16 @@ func (d mysqlDriver) process(migration exodus.Migration, batch int) error {
 			if err := d.createTable(p); err != nil {
 				return err
 			}
+		case exodus.DROP_TABLE:
+			if err := d.dropTable(p); err != nil {
+				return err
+			}
 		case exodus.RENAME_TABLE:
 			if err := d.renameTable(p); err != nil {
+				return err
+			}
+		case exodus.RAW_SQL:
+			if err := d.rawSql(p); err != nil {
 				return err
 			}
 		default:
@@ -270,6 +279,19 @@ func (d mysqlDriver) renameTable(payload *exodus.MigrationOperation) error {
 
 	if _, err := d.db.Exec(sql); err != nil {
 		return fmt.Errorf("error renaming `%s` table to `%s`: %w", from, to, err)
+	}
+
+	return nil
+}
+
+func (d mysqlDriver) rawSql(payload *exodus.MigrationOperation) error {
+	sql, ok := payload.Payload().(string)
+	if !ok {
+		return fmt.Errorf("payload `%+v` is not a valid string", sql)
+	}
+
+	if _, err := d.db.Exec(sql); err != nil {
+		return fmt.Errorf("error executing raw sql: %w", err)
 	}
 
 	return nil

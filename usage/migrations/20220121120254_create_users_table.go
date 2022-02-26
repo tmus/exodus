@@ -13,6 +13,10 @@ func (migration20220121120254create_users_table) Up(schema *exodus.MigrationPayl
 		column.String("email", 100).Unique(),
 		column.String("password", 255),
 	})
+
+	schema.Drop("users")
+
+	schema.Raw("create table `what` (`id` varchar(255));")
 }
 
 func (migration20220121120254create_users_table) Down(schema *exodus.MigrationPayload) {

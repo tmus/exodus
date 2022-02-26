@@ -15,6 +15,7 @@ const (
 	CREATE_TABLE
 	DROP_TABLE
 	RENAME_TABLE
+	RAW_SQL
 )
 
 type MigrationOperation struct {
