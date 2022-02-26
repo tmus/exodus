@@ -8,18 +8,20 @@ import (
 
 type columnFormatter func(column column.Definition) (string, error)
 
-var formatters = map[string]columnFormatter{
-	"string":  makeStringColumn,
-	"boolean": makeBooleanColumn,
-	"date":    makeDateColumn,
-	"time":    makeTimeColumn,
-	"int":     makeIntColumn,
+func (d mysqlDriver) formatters() map[string]columnFormatter {
+	return map[string]columnFormatter{
+		"string":  makeStringColumn,
+		"boolean": makeBooleanColumn,
+		"date":    makeDateColumn,
+		"time":    makeTimeColumn,
+		"int":     makeIntColumn,
+	}
 }
 
 // makeColumn takes a column.Definition and turns it into a string representation
 // of that column, in a format that is understood by the driver.
 func (d mysqlDriver) makeColumn(c column.Definition) (string, error) {
-	if fn, ok := formatters[c.Kind]; ok {
+	if fn, ok := d.formatters()[c.Kind]; ok {
 		return fn(c)
 	}
 

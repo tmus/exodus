@@ -2,10 +2,7 @@ module github.com/tmus/exodus
 
 go 1.17
 
-require (
-	github.com/mattn/go-sqlite3 v1.14.10
-	github.com/spf13/cobra v1.3.0
-)
+require github.com/spf13/cobra v1.3.0
 
 require github.com/rs/zerolog v1.26.1 // indirect
 
